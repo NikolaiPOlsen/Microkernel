@@ -1,0 +1,5 @@
+{
+"type": "<MessageType>",
+"timestamp": "<ISO 8601 Timestamp>",
+"payload": { ... }
+}
