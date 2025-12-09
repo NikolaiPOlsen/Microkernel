@@ -1,9 +1,15 @@
+import time
+
 from Packages.IPC.Communication import IPCManager
 from multiprocessing import Process
+import json
 
 class microkernel:
     def __init__(self):
         print("Microkernel init")
+        with open("messageContract.json", "r", encoding="utf-8") as f:
+            self.contract = json.load(f)
+
         self.ipc = IPCManager()
         self.plugins = {}
         self.process = {}
@@ -80,4 +86,82 @@ class microkernel:
         plugin_info['process'] = None
         plugin_info['queue'] = None
         print(f"Plugin {plugin_name} stopped.")
+        return True
+
+#Validering av nestet felter
+    def nested_fields(self, message: dict, field_path: str) -> bool:
+        fields = field_path.split(".")
+        current = message
+
+        for field in fields:
+            if not isinstance(current, dict):
+                return False
+            current = current[field]
+        return True
+
+#Melidngs validering
+    def validate_message(self, message):
+        message_type = message.get("type")
+        if message_type is None:
+            return False
+
+        spec = self.contract.get(message_type)
+        if spec is None:
+            return False
+
+        for field_path in spec.get("required_fields", []):
+            if not self.nested_fields(message, field_path):
+                return False
+
+        message_payload = message.get("payload", {})
+        if not isinstance(message_payload, dict):
+            return False
+
+        message_schema = spec.get("payload_schema", {})
+
+        for field_name, expected_type in message_schema.items():
+            value = message_payload.get(field_name)
+            if value is None:
+                return False
+
+            if expected_type == "string" and not isinstance(value, str):
+                return False
+            if expected_type == "number" and not isinstance(value, (int, float)):
+                return False
+
+        return True
+
+    def send_user_logged_in_event(self, plugin_name, user_id):
+        message = {
+            "type": "UserLoggedInEvent",
+            "timestamp": time.time(),
+            "payload": {
+                "user_id": user_id
+            }
+        }
+
+        if not self.validate_message(message):
+            print("Invalid UserLoggedInEvent message format.")
+            return False
+
+        self.ipc.send_to_plugin(plugin_name, message)
+        print(f"UserLoggedInEvent sent to {plugin_name}.")
+        return True
+
+    def send_data_processed_event(self, plugin_name, data_id):
+        message = {
+            "type": "DataProcessedEvent",
+            "timestamp": time.time(),
+            "payload": {
+                "data_id": data_id,
+                "processing_time": time.time() % 1000
+            }
+        }
+
+        if not self.validate_message(message):
+            print("Invalid DataProcessedEvent message format.")
+            return False
+
+        self.ipc.send_to_plugin(plugin_name, message)
+        print(f"DataProcessedEvent sent to {plugin_name}.")
         return True

@@ -1,4 +1,5 @@
 #Imports
+import json
 import time
 import logging
 
@@ -24,10 +25,11 @@ class plugin_MetricsLogger:
             message_type = message.get("type")
 
             if message_type is None:
-                print("Received invalid message format.")
+                logging.error("Received invalid message format.")
                 continue
 
             if message_type == "SHUTDOWN":
+                logging.info(f"MetricsLogger plugin shutting down. Processed {self.eventCount} events, before shutdown")
                 self.running = False
                 continue
 
@@ -41,12 +43,32 @@ class plugin_MetricsLogger:
 
 #Håndterer bruker innlogging melding
     def handle_user_logged_in(self, message):
-        logging.info("Received user logged in")
-        logging.info("User ID: %s", message.get("user_id"))
-        logging.info("Timestamp: %s", message.get("timestamp"))
+        log_entry = {
+            "type": "UserLoggedInEvent",
+            "timestamp": message.get("timestamp"),
+            "payload": {
+                "user_id": message.get("user_id")
+            },
+            "metadata": {
+                "plugin": "MetricsLogger",
+                "received_at": time.time()
+            }
+        }
+
+        logging.info(json.dumps(log_entry))
 
 #Håndterer data prosessert melding
     def handle_data_processed(self, message):
-        logging.info("Received data processed")
-        logging.info("Data ID: %s", message.get("data_id"))
-        logging.info("Processing time: %s seconds", message.get("processing_time"))
+        log_entry = {
+            "type": "DataProcessedEvent",
+            "timestamp": message.get("timestamp"),
+            "payload": {
+                "data_id": message.get("data_id"),
+                "processing_time": message.get("processing_time")
+            },
+            "metadata": {
+                "plugin": "MetricsLogger",
+                "received_at": time.time()
+            }
+        }
+        logging.info(json.dumps(log_entry))

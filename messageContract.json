@@ -1,0 +1,17 @@
+{
+  "UserLoggedInEvent": {
+    "type": "UserLoggedInEvent",
+    "required_fields": ["timestamp", "payload.user_id"],
+    "payload_schema": {
+      "user_id": "string"
+    }
+  },
+  "DataProcessedEvent": {
+    "type": "DataProcessedEvent",
+    "required_fields": ["timestamp", "payload.data_id", "payload.processing_time"],
+    "payload_schema": {
+      "data_id": "string",
+      "processing_time": "number"
+    }
+  }
+}
