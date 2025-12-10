@@ -1,12 +1,11 @@
-import time
-
 from Packages.IPC.Communication import IPCManager
 from multiprocessing import Process
 import json
+import time
+from datetime import datetime
 
 class microkernel:
     def __init__(self):
-        print("Microkernel init")
         with open("messageContract.json", "r", encoding="utf-8") as f:
             self.contract = json.load(f)
 
@@ -17,18 +16,21 @@ class microkernel:
 
 #Starter microkernel
     def start(self):
-        print("Microkernel starting")
+        print("\033[32mMicrokernel starting\033[0m")
         self.running = True
 
 #Stopper microkernel
     def stop(self):
-        print("Microkernel stopping")
+        print("\033[31mMicrokernel stopping\033[0m")
         self.running = False
+
+        for plugin_name in list(self.plugins.keys()):
+            self.stop_plugin(plugin_name)
 
 #Registerer en ny plugin
     def register_plugin(self, plugin_name, plugin_target):
         if plugin_name in self.plugins:
-            print(f"Plugin {plugin_name} is already registered.")
+            print(f"\033[33mPlugin {plugin_name} is already registered.\033[0m")
             return False
 
         self.plugins[plugin_name] = {
@@ -37,19 +39,19 @@ class microkernel:
             'process': None,
             'queue': None
         }
-        print(f"Plugin {plugin_name} registered.")
+        print(f"\033[32mPlugin {plugin_name} registered.\033[0m")
         return True
 
 #Starter plugin
     def start_plugin(self, plugin_name):
         if plugin_name not in self.plugins:
-            print(f"Plugin {plugin_name} is not registered.")
+            print(f"\033[33mPlugin {plugin_name} is not registered.\033[0m")
             return False
 
         plugin_info = self.plugins[plugin_name]
 
         if plugin_info['process'] is not None and plugin_info['process'].is_alive():
-            print(f"Plugin {plugin_name} is already running.")
+            print(f"\033[33mPlugin {plugin_name} is already running.\033[0m")
             return False
 
         queue = self.ipc.start_com(plugin_name)
@@ -59,20 +61,20 @@ class microkernel:
 
         self.plugins[plugin_name]['process'] = process
         self.plugins[plugin_name]['queue'] = queue
-        print(f"Plugin {plugin_name} started (PID: {process.pid}).")
+        print(f"\033[32mPlugin {plugin_name} started (PID: {process.pid}).\033[0m")
         return True
 
 #Stopper plugin
     def stop_plugin(self, plugin_name):
         if plugin_name not in self.plugins:
-            print(f"Plugin {plugin_name} is not registered.")
+            print(f"\033[33mPlugin {plugin_name} is not registered.\033[0m")
             return False
 
         plugin_info = self.plugins.get(plugin_name)
         process = plugin_info['process']
 
         if process is None or not process.is_alive():
-            print(f"Plugin {plugin_name} is not running.")
+            print(f"\033[33mPlugin {plugin_name} is not running.\033[0m")
             return False
 
         self.ipc.send_to_plugin(plugin_name, {'type': 'SHUTDOWN'})
@@ -80,12 +82,12 @@ class microkernel:
 
         if process.is_alive():
             process.terminate()
-            print(f"Plugin {plugin_name} was forcefully stopped.")
+            print(f"\033[31mPlugin {plugin_name} was forcefully stopped.\033[0m")
 
         self.ipc.stop_com(plugin_name)
         plugin_info['process'] = None
         plugin_info['queue'] = None
-        print(f"Plugin {plugin_name} stopped.")
+        print(f"\033[31mPlugin {plugin_name} stopped.\033[0m")
         return True
 
 #Validering av nestet felter
@@ -131,27 +133,54 @@ class microkernel:
 
         return True
 
+#Sjekker om plugin kjører
+    def is_plugin_running(self, plugin_name):
+        plugin_info = self.plugins.get(plugin_name)
+        if plugin_info and plugin_info['process'] and plugin_info['process'].is_alive():
+            return True
+        return False
+
+#Sender UserLoggedInEvent melding
     def send_user_logged_in_event(self, plugin_name, user_id):
+        if plugin_name not in self.plugins:
+            print(f"\033[33mPlugin {plugin_name} is not registered.\033[0m")
+            return False
+
+        plugin_running = self.is_plugin_running(plugin_name)
+        if not plugin_running:
+            print(f"\033[33mPlugin {plugin_name} is not running.\033[0m")
+            return False
+
         message = {
             "type": "UserLoggedInEvent",
-            "timestamp": time.time(),
+            "timestamp": datetime.utcnow().isoformat(),
             "payload": {
                 "user_id": user_id
             }
         }
 
         if not self.validate_message(message):
-            print("Invalid UserLoggedInEvent message format.")
+            print("\033[31mInvalid UserLoggedInEvent message format.\033[0m")
             return False
 
         self.ipc.send_to_plugin(plugin_name, message)
-        print(f"UserLoggedInEvent sent to {plugin_name}.")
+        print(f"UserLoggedInEvent sent to \033[32m{plugin_name}\033[0m.")
         return True
 
+#Sender DataProcessedEvent melding
     def send_data_processed_event(self, plugin_name, data_id):
+        if plugin_name not in self.plugins:
+            print(f"\033[33mPlugin {plugin_name} is not registered.\033[0m")
+            return False
+
+        plugin_running = self.is_plugin_running(plugin_name)
+        if not plugin_running:
+            print(f"\033[33mPlugin {plugin_name} is not running.\033[0m")
+            return False
+
         message = {
             "type": "DataProcessedEvent",
-            "timestamp": time.time(),
+            "timestamp": datetime.utcnow().isoformat(),
             "payload": {
                 "data_id": data_id,
                 "processing_time": time.time() % 1000
@@ -159,9 +188,9 @@ class microkernel:
         }
 
         if not self.validate_message(message):
-            print("Invalid DataProcessedEvent message format.")
+            print("\033[31mInvalid DataProcessedEvent message format.\033[0m")
             return False
 
         self.ipc.send_to_plugin(plugin_name, message)
-        print(f"DataProcessedEvent sent to {plugin_name}.")
+        print(f"DataProcessedEvent sent to \033[32m{plugin_name}\033[0m.")
         return True

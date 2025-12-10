@@ -25,11 +25,11 @@ class plugin_MetricsLogger:
             message_type = message.get("type")
 
             if message_type is None:
-                logging.error("Received invalid message format.")
+                logging.error("\033[31mReceived invalid message format.\033[0m")
                 continue
 
             if message_type == "SHUTDOWN":
-                logging.info(f"MetricsLogger plugin shutting down. Processed {self.eventCount} events, before shutdown")
+                logging.info(f"\033[32mMetricsLogger plugin shutting down. Processed {self.eventCount} events, before shutdown\033[0m")
                 self.running = False
                 continue
 
@@ -38,7 +38,7 @@ class plugin_MetricsLogger:
                 handler(message)
                 self.eventCount += 1
             else:
-                print(f"Unknown message type: {message_type}")
+                print(f"\033[31mUnknown message type: {message_type}\033[0m")
                 pass
 
 #Håndterer bruker innlogging melding
@@ -47,7 +47,7 @@ class plugin_MetricsLogger:
             "type": "UserLoggedInEvent",
             "timestamp": message.get("timestamp"),
             "payload": {
-                "user_id": message.get("user_id")
+                "user_id": message["payload"].get("user_id")
             },
             "metadata": {
                 "plugin": "MetricsLogger",
@@ -63,8 +63,8 @@ class plugin_MetricsLogger:
             "type": "DataProcessedEvent",
             "timestamp": message.get("timestamp"),
             "payload": {
-                "data_id": message.get("data_id"),
-                "processing_time": message.get("processing_time")
+                "data_id": message["payload"].get("data_id"),
+                "processing_time": message["payload"].get("processing_time")
             },
             "metadata": {
                 "plugin": "MetricsLogger",
