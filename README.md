@@ -1,7 +1,7 @@
 # Microkernel
 
 ## Overview
-This program is a python programmed dummy microkernel (core functions) with an external plugin for metrics logging.
+This program is a python programmed dummy microkernel (core functionality) with an external plugin for metrics logging.
 All the plugins runs in issolated processes and communicate via IPC queues
 The kernel is tasked to enforce a message contract before sending events. The Metrics logger handles and logs the events according to the specifications
 
